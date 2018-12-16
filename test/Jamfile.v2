@@ -80,8 +80,7 @@ test-suite graph_test :
     [ run subgraph_add.cpp ../../test/build//boost_unit_test_framework/<link>static : $(TEST_DIR) ]
     [ run subgraph_props.cpp ]
 
-    # TEMPORARILY DISABLED UNTIL COMPILATION FAILURE IS RESOLVED.
-    # [ run isomorphism.cpp ../../test/build//boost_test_exec_monitor ]
+    [ run isomorphism.cpp ../../test/build//boost_test_exec_monitor ]
     [ run adjacency_matrix_test.cpp ]
     [ compile vector_graph_cc.cpp ]
     [ compile copy.cpp ]
