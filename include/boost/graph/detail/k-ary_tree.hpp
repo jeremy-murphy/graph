@@ -299,7 +299,10 @@ namespace boost
           free_list.back() = nodes.size();
         else
           free_list.pop_back();
+
         BOOST_ASSERT(!free_list.empty());
+        BOOST_ASSERT(free_list[0] == nodes.size());
+
         return result;
       }
 
