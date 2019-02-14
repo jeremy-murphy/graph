@@ -22,6 +22,8 @@
 
 #include <boost/type_traits/conditional.hpp>
 
+#include <boost/iterator/counting_iterator.hpp> // compact
+
 #include <stdexcept> // temporary
 #include <utility>
 
@@ -615,6 +617,70 @@ namespace boost
   {
     return detail::bifurcate_isomorphic(0, g, 0, h);
   }
+
+  template <typename Vertex = std::size_t>
+  class compact_binary_tree
+  {
+    struct compact_node
+    {
+      compact_node() : ltag(false), rtag(false) {}
+
+      bool ltag, rtag;
+    };
+
+  public:
+    BOOST_STATIC_CONSTEXPR std::size_t k = 2;
+
+    // *** Graph interface ***
+
+    typedef Vertex vertex_descriptor;
+    typedef std::pair<vertex_descriptor, vertex_descriptor> edge_descriptor;
+    typedef disallow_parallel_edge_tag edge_parallel_category;
+    typedef std::size_t degree_size_type;
+    typedef std::size_t vertices_size_type;
+    typedef bidirectional_tag directed_category;
+    class traversal_category : public vertex_list_graph_tag {};
+
+    BOOST_STATIC_CONSTEXPR vertex_descriptor null_vertex()
+    {
+      return vertex_descriptor(-1);
+    }
+
+    // *** VertexListGraph interface ***
+
+    typedef counting_iterator<vertex_descriptor> vertex_iterator;
+    typedef std::size_t vertex_size_type;
+
+    friend
+    vertex_size_type num_vertices(compact_binary_tree const& g)
+    {
+      return g.nodes.size();
+    }
+
+    friend
+    std::pair<vertex_iterator, vertex_iterator>
+    vertices(compact_binary_tree const& g)
+    {
+      return std::make_pair(vertex_iterator(0), vertex_iterator(g.nodes.size()));
+    }
+
+    /// *** MutableGraph interface ***
+
+    vertex_descriptor add_vertex()
+    {
+      nodes.push_back();
+    }
+
+  private:
+    /*
+    typedef array<compact_node, 4> ganglion;
+
+    BOOST_STATIC_ASSERT(sizeof(ganglion) / 8 == 1);
+    */
+
+    std::vector<compact_node> nodes;
+  };
+
 }
 
 #endif

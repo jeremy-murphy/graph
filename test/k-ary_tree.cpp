@@ -32,16 +32,10 @@ void create_full_tree(Graph &tree,
   }
 }
 
-
-void empty_forward_binary_tree()
+template <typename Tree>
+void empty_binary_tree()
 {
-  boost::forward_binary_tree tree;
-  BOOST_CHECK(num_vertices(tree) == 0);
-}
-
-void empty_bidirectional_binary_tree()
-{
-  boost::bidirectional_binary_tree tree;
+  Tree tree;
   BOOST_CHECK(num_vertices(tree) == 0);
 }
 
@@ -257,18 +251,21 @@ int test_main(int, char*[])
   using namespace boost::concepts;
   using boost::forward_binary_tree;
   using boost::bidirectional_binary_tree;
+  using boost::compact_binary_tree;
 
-  BOOST_CONCEPT_ASSERT((IncidenceGraph<forward_binary_tree>));
+  BOOST_CONCEPT_ASSERT((Graph< compact_binary_tree<> >));
   BOOST_CONCEPT_ASSERT((BidirectionalGraph<bidirectional_binary_tree>));
   BOOST_CONCEPT_ASSERT((MutableGraph<bidirectional_binary_tree>));
   BOOST_CONCEPT_ASSERT((MutableGraph<forward_binary_tree>));
   BOOST_CONCEPT_ASSERT((VertexListGraph<forward_binary_tree>));
   BOOST_CONCEPT_ASSERT((VertexListGraph<bidirectional_binary_tree>));
+  BOOST_CONCEPT_ASSERT((VertexListGraph< compact_binary_tree<> >));
   // BOOST_CONCEPT_ASSERT((EdgeListGraph<forward_binary_tree>));
   // BOOST_CONCEPT_ASSERT((EdgeListGraph<bidirectional_binary_tree>));
 
-  empty_forward_binary_tree();
-  empty_bidirectional_binary_tree();
+  empty_binary_tree<forward_binary_tree>();
+  empty_binary_tree<bidirectional_binary_tree>();
+  empty_binary_tree< compact_binary_tree<> >();
   push_pop_binary_tree<forward_binary_tree>();
   push_pop_binary_tree<bidirectional_binary_tree>();
   insert_remove_randomly<forward_binary_tree>();
