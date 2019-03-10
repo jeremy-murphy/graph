@@ -618,16 +618,9 @@ namespace boost
     return detail::bifurcate_isomorphic(0, g, 0, h);
   }
 
-  template <typename Vertex = std::size_t>
+  template <typename Vertex = short>
   class compact_binary_tree
   {
-    struct compact_node
-    {
-      compact_node() : ltag(false), rtag(false) {}
-
-      bool ltag, rtag;
-    };
-
   public:
     BOOST_STATIC_CONSTEXPR std::size_t k = 2;
 
@@ -641,9 +634,45 @@ namespace boost
     typedef bidirectional_tag directed_category;
     class traversal_category : public vertex_list_graph_tag {};
 
-    BOOST_STATIC_CONSTEXPR vertex_descriptor null_vertex()
+  private:
+    struct compact_node
     {
-      return vertex_descriptor(-1);
+      compact_node() : ltag(false), rlink(0) {}
+
+      bool ltag : 1;
+      vertex_descriptor rlink : sizeof(vertex_descriptor) * CHAR_BIT - 1;
+    };
+
+    BOOST_STATIC_ASSERT(sizeof(compact_node) == sizeof(vertex_descriptor));
+
+  public:
+    friend
+    bool
+    has_left_successor(vertex_descriptor u, compact_binary_tree const &g)
+    {
+      return g.nodes[u].ltag;
+    }
+
+    friend
+    bool
+    has_right_successor(vertex_descriptor u, compact_binary_tree const &g)
+    {
+      return g.nodes[u].rlink != null_vertex();
+    }
+
+    BOOST_STATIC_CONSTEXPR
+    vertex_descriptor max_size()
+    {
+      return is_signed<vertex_descriptor>::value ?
+        std::numeric_limits<vertex_descriptor>::max() :
+        std::numeric_limits<vertex_descriptor>::max() >> 1 ;
+    }
+
+    BOOST_STATIC_CONSTEXPR
+    vertex_descriptor null_vertex()
+    {
+      return is_signed<vertex_descriptor>::value ? -1 :
+             std::numeric_limits<vertex_descriptor>::max() >> 1;
     }
 
     // *** VertexListGraph interface ***
@@ -666,19 +695,61 @@ namespace boost
 
     /// *** MutableGraph interface ***
 
-    vertex_descriptor add_vertex()
+    friend
+    std::pair<edge_descriptor, bool>
+    add_edge(vertex_descriptor u, vertex_descriptor v, compact_binary_tree &g)
     {
-      nodes.push_back();
+      BOOST_ASSERT(!has_right_successor(u, g) || !has_left_successor(u, g));
+      BOOST_ASSERT(boost::find(g.roots, v) != boost::end(g.roots));
+
+      if (!has_left_successor(u, g))
+      {
+        std::rotate(g.nodes.begin() + u + 1, g.nodes.begin() + v,
+                    g.nodes.begin() + *next(find(g.roots, v)));
+        // TODO: Update u and roots
+      }
+      else
+      {
+
+      }
+    }
+
+    friend
+    void
+    remove_edge(edge_descriptor e, compact_binary_tree &g)
+    {
+      BOOST_ASSERT(e.first >= 0);
+      BOOST_ASSERT(e.second >= 0);
+      BOOST_ASSERT(e.first < num_vertices(g));
+      BOOST_ASSERT(e.second < num_vertices(g));
+      BOOST_ASSERT(e.first != e.second);
+      BOOST_ASSERT(has_left_successor(e.first, g)
+                  || has_right_successor(e.first, g));
+
+      if (has_left_successor(e.first, g))
+      {
+        if (left_successor(e.first, g) == e.second)
+        {
+          g.nodes[e.first].child = false;
+          return;
+        }
+      }
+
+      // TODO: else?
+    }
+
+    friend
+    vertex_descriptor add_vertex(compact_binary_tree &g)
+    {
+      g.nodes.push_back();
+      if (!g.roots.empty())
+        g.nodes[g.roots.back()].sibling = true;
+      g.roots.push_back(g.nodes.size());
     }
 
   private:
-    /*
-    typedef array<compact_node, 4> ganglion;
-
-    BOOST_STATIC_ASSERT(sizeof(ganglion) / 8 == 1);
-    */
-
     std::vector<compact_node> nodes;
+    std::vector<vertex_descriptor> roots;
   };
 
 }
