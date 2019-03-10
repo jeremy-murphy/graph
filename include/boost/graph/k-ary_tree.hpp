@@ -637,11 +637,14 @@ namespace boost
   private:
     struct compact_node
     {
-      compact_node() : ltag(false), rlink(0) {}
+      compact_node() : ltag(false), rlink(null_vertex()) {}
 
       bool ltag : 1;
       vertex_descriptor rlink : sizeof(vertex_descriptor) * CHAR_BIT - 1;
     };
+
+    typedef typename std::vector<compact_node>::iterator node_iterator;
+    typedef typename std::vector<compact_node>::const_iterator const_node_iterator;
 
     BOOST_STATIC_ASSERT(sizeof(compact_node) == sizeof(vertex_descriptor));
 
@@ -678,7 +681,7 @@ namespace boost
     // *** VertexListGraph interface ***
 
     typedef counting_iterator<vertex_descriptor> vertex_iterator;
-    typedef std::size_t vertex_size_type;
+    typedef vertex_descriptor vertex_size_type;
 
     friend
     vertex_size_type num_vertices(compact_binary_tree const& g)
@@ -696,22 +699,57 @@ namespace boost
     /// *** MutableGraph interface ***
 
     friend
+    vertex_descriptor add_vertex(compact_binary_tree &g)
+    {
+      g.nodes.push_back();
+      /*
+      if (!g.roots.empty())
+        g.nodes[g.roots.back()].sibling = true;
+      g.roots.push_back(g.nodes.size());
+      */
+      return g.nodes.size();
+    }
+
+    friend
     std::pair<edge_descriptor, bool>
     add_edge(vertex_descriptor u, vertex_descriptor v, compact_binary_tree &g)
     {
-      BOOST_ASSERT(!has_right_successor(u, g) || !has_left_successor(u, g));
-      BOOST_ASSERT(boost::find(g.roots, v) != boost::end(g.roots));
+      BOOST_ASSERT(u < num_vertices(g) + 1);
+      BOOST_ASSERT(v < num_vertices(g) + 1 || v == u + 1);
 
-      if (!has_left_successor(u, g))
-      {
-        std::rotate(g.nodes.begin() + u + 1, g.nodes.begin() + v,
-                    g.nodes.begin() + *next(find(g.roots, v)));
-        // TODO: Update u and roots
-      }
-      else
-      {
+      if (v >= num_vertices(g))
+        g.nodes.resize(v + 1);
 
+      if (!has_left_successor(u, g)) {
+        node_iterator const first = g.nodes.begin();
+        vertex_descriptor v_rightmost = rightmost(v, g);
+        std::rotate(first + u + 1, first + v,
+                    first + v_rightmost + 1);
+        if (has_right_successor(u, g)) {
+          g.nodes[u].rlink += v_rightmost - v + 1;
+        }
+
+        return std::make_pair(edge_descriptor(u, v), true);
       }
+      else if (!has_right_successor(u, g)) {
+        g.nodes[u].rlink = v - u;
+        return std::make_pair(edge_descriptor(u, v), true);
+      }
+      else {
+        return std::make_pair(edge_descriptor(u, v), false);
+      }
+    }
+
+    friend
+    vertex_descriptor rightmost(vertex_descriptor u, compact_binary_tree &g)
+    {
+      while (true)
+        if (g.nodes[u].rlink != null_vertex())
+          u += g.nodes[u].rlink;
+        else if (g.nodes[u].ltag)
+          u++;
+        else
+          return u;
     }
 
     friend
@@ -736,15 +774,6 @@ namespace boost
       }
 
       // TODO: else?
-    }
-
-    friend
-    vertex_descriptor add_vertex(compact_binary_tree &g)
-    {
-      g.nodes.push_back();
-      if (!g.roots.empty())
-        g.nodes[g.roots.back()].sibling = true;
-      g.roots.push_back(g.nodes.size());
     }
 
   private:

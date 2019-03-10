@@ -17,11 +17,11 @@
 
 #include <utility>
 
-template <typename Graph>
-void create_full_tree(Graph &tree,
-                      typename boost::graph_traits<Graph>::vertex_descriptor weight)
+template <typename MutableGraph>
+void create_full_tree(MutableGraph &tree,
+                      typename boost::graph_traits<MutableGraph>::vertex_descriptor weight)
 {
-  typedef typename boost::graph_traits<Graph>::vertex_descriptor vertex_descriptor;
+  typedef typename boost::graph_traits<MutableGraph>::vertex_descriptor vertex_descriptor;
 
   vertex_descriptor parent = 0;
   for (vertex_descriptor child = 1; child != weight; child++)
@@ -231,10 +231,9 @@ void binary_tree()
 }
 
 
-template <bool Predecessor>
-void VertexListGraph_test()
+template <typename Tree>
+void VertexListGraph_test(Tree const &)
 {
-  typedef boost::k_ary_tree<2, Predecessor> Tree;
   Tree tree;
   typedef typename boost::graph_traits<Tree>::vertex_descriptor vertex_descriptor;
 
@@ -242,7 +241,21 @@ void VertexListGraph_test()
 
   boost::array<vertex_descriptor, 7> actual,
                                       expected = {{3, 1, 4, 0, 5, 2, 6}};
-  copy(vertices(tree), boost::begin(actual));
+  boost::copy(vertices(tree), boost::begin(actual));
+  BOOST_CHECK(actual == expected);
+}
+
+template <typename Vertex>
+void VertexListGraph_test(boost::compact_binary_tree<Vertex> const &)
+{
+  boost::compact_binary_tree<Vertex> tree;
+  typedef Vertex vertex_descriptor;
+
+  create_full_tree(tree, 7);
+
+  boost::array<vertex_descriptor, 7> actual,
+                                     expected = {{0, 1, 2, 3, 4, 5, 6}};
+  boost::copy(vertices(tree), boost::begin(actual));
   BOOST_CHECK(actual == expected);
 }
 
@@ -253,7 +266,6 @@ int test_main(int, char*[])
   using boost::bidirectional_binary_tree;
   using boost::compact_binary_tree;
 
-  BOOST_CONCEPT_ASSERT((Graph< compact_binary_tree<> >));
   BOOST_CONCEPT_ASSERT((BidirectionalGraph<bidirectional_binary_tree>));
   BOOST_CONCEPT_ASSERT((MutableGraph<bidirectional_binary_tree>));
   BOOST_CONCEPT_ASSERT((MutableGraph<forward_binary_tree>));
@@ -282,8 +294,12 @@ int test_main(int, char*[])
 
   mutable_bidirectional();
 
-  VertexListGraph_test<0>();
-  VertexListGraph_test<1>();
+  VertexListGraph_test(forward_binary_tree());
+  VertexListGraph_test(bidirectional_binary_tree());
+  VertexListGraph_test(compact_binary_tree<>());
+
+  std::cout << "null: " << compact_binary_tree<>().null_vertex() << std::endl;
+  std::cout << "max_size: " << compact_binary_tree<>().max_size() << std::endl;
 
   return 0;
 }
