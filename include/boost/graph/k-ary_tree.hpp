@@ -644,6 +644,19 @@ namespace boost
     class traversal_category : public vertex_list_graph_tag {};
 
   private:
+    /**
+     * @class compact_node
+     *
+     * This compact node representation indicates the presence of a left successor
+     * by a Boolean flag, thus if it is present then it is the next node in the
+     * sequence.
+     * rlink is a relative offset to the right successor, which equals
+     * null_vertex() if it does not have one.
+     * The storage of ltag uses one bit, and so one bit of storage is removed
+     * from rlink so as to not waste an extra byte just to store the bit for ltag.
+     * This means that the maximum size of a tree is not the maximum value of
+     * the Vertex template parameter, but half of it.
+     */
     struct compact_node
     {
       compact_node() : ltag(false), rlink(null_vertex()) {}
