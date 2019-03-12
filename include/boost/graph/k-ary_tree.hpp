@@ -745,11 +745,9 @@ namespace boost
       if (!has_left_successor(u, g)) {
         node_iterator const first = g.nodes.begin();
         vertex_descriptor v_rightmost = rightmost(v, g);
-        std::rotate(first + u + 1, first + v,
-                    first + v_rightmost + 1);
-        if (has_right_successor(u, g)) {
+        std::rotate(first + u + 1, first + v, first + v_rightmost + 1);
+        if (has_right_successor(u, g))
           g.nodes[u].rlink += v_rightmost - v + 1;
-        }
 
         return std::make_pair(edge_descriptor(u, v), true);
       }
