@@ -627,11 +627,11 @@ namespace boost
     return detail::bifurcate_isomorphic(0, g, 0, h);
   }
 
-  template <typename Vertex = short>
+  template <typename Vertex = short unsigned>
   class compact_binary_tree
   {
   public:
-    BOOST_STATIC_CONSTEXPR std::size_t k = 2;
+    BOOST_STATIC_CONSTEXPR short unsigned k = 2;
 
     // *** Graph interface ***
 
@@ -644,47 +644,25 @@ namespace boost
     class traversal_category : public vertex_list_graph_tag {};
 
   private:
-    /**
-     * @class compact_node
-     *
-     * This compact node representation indicates the presence of a left successor
-     * by a Boolean flag, thus if it is present then it is the next node in the
-     * sequence.
-     * rlink is a relative offset to the right successor, which equals
-     * null_vertex() if it does not have one.
-     * The storage of ltag uses one bit, and so one bit of storage is removed
-     * from rlink so as to not waste an extra byte just to store the bit for ltag.
-     * This means that the maximum size of a tree is not the maximum value of
-     * the Vertex template parameter, but half of it.
-     */
-    struct compact_node
-    {
-      compact_node() : ltag(false), rlink(null_vertex()) {}
-
-      bool ltag : 1;
-      vertex_descriptor rlink : sizeof(vertex_descriptor) * CHAR_BIT - 1;
-    };
-
-    typedef typename std::vector<compact_node>::iterator node_iterator;
-    typedef typename std::vector<compact_node>::const_iterator const_node_iterator;
-
-    BOOST_STATIC_ASSERT(sizeof(compact_node) == sizeof(vertex_descriptor));
+    typedef typename std::vector<bool>::iterator node_iterator;
+    typedef typename std::vector<bool>::const_iterator const_node_iterator;
 
   public:
     friend
     bool
     has_left_successor(vertex_descriptor u, compact_binary_tree const &g)
     {
-      return g.nodes[u].ltag;
+      return g.ltag(u);
     }
 
     friend
     bool
     has_right_successor(vertex_descriptor u, compact_binary_tree const &g)
     {
-      return g.nodes[u].rlink != null_vertex();
+      return g.rtag(u);
     }
 
+    /*
     BOOST_STATIC_CONSTEXPR
     vertex_descriptor max_size()
     {
@@ -692,12 +670,12 @@ namespace boost
         std::numeric_limits<vertex_descriptor>::max() :
         std::numeric_limits<vertex_descriptor>::max() >> 1 ;
     }
+    */
 
     BOOST_STATIC_CONSTEXPR
     vertex_descriptor null_vertex()
     {
-      return is_signed<vertex_descriptor>::value ? -1 :
-             std::numeric_limits<vertex_descriptor>::max() >> 1;
+      return vertex_descriptor(-1);
     }
 
     // *** VertexListGraph interface ***
@@ -708,14 +686,14 @@ namespace boost
     friend
     vertex_size_type num_vertices(compact_binary_tree const& g)
     {
-      return g.nodes.size();
+      return 2 * g.nodes.size();
     }
 
     friend
     std::pair<vertex_iterator, vertex_iterator>
     vertices(compact_binary_tree const& g)
     {
-      return std::make_pair(vertex_iterator(0), vertex_iterator(g.nodes.size()));
+      return std::make_pair(vertex_iterator(0), vertex_iterator(num_vertices(g)));
     }
 
     /// *** MutableGraph interface ***
@@ -723,13 +701,13 @@ namespace boost
     friend
     vertex_descriptor add_vertex(compact_binary_tree &g)
     {
-      g.nodes.push_back();
+      g.nodes.resize(g.nodes.size() + 2);
       /*
       if (!g.roots.empty())
         g.nodes[g.roots.back()].sibling = true;
       g.roots.push_back(g.nodes.size());
       */
-      return g.nodes.size();
+      return num_vertices(g);
     }
 
     friend
@@ -739,38 +717,30 @@ namespace boost
       BOOST_ASSERT(u < num_vertices(g) + 1);
       BOOST_ASSERT(v < num_vertices(g) + 1 || v == u + 1);
 
-      if (v >= num_vertices(g))
-        g.nodes.resize(v + 1);
+      edge_descriptor const new_edge(u, v);
 
-      if (!has_left_successor(u, g)) {
-        node_iterator const first = g.nodes.begin();
-        vertex_descriptor v_rightmost = rightmost(v, g);
-        std::rotate(first + u + 1, first + v, first + v_rightmost + 1);
-        if (has_right_successor(u, g))
-          g.nodes[u].rlink += v_rightmost - v + 1;
+      if (v == u + 1)
+      {
+        BOOST_ASSERT(!has_left_successor(u, g));
+        g.ltag(u, 1);
+        return std::make_pair(new_edge, true);
+      }
 
-        return std::make_pair(edge_descriptor(u, v), true);
-      }
-      else if (!has_right_successor(u, g)) {
-        g.nodes[u].rlink = v - u;
-        return std::make_pair(edge_descriptor(u, v), true);
-      }
-      else {
-        return std::make_pair(edge_descriptor(u, v), false);
-      }
+    // 11 00 11 00 00 00
+
     }
 
-    friend
-    vertex_descriptor rightmost(vertex_descriptor u, compact_binary_tree &g)
-    {
-      while (true)
-        if (g.nodes[u].rlink != null_vertex())
-          u += g.nodes[u].rlink;
-        else if (g.nodes[u].ltag)
-          u++;
-        else
-          return u;
-    }
+//     friend
+//     vertex_descriptor rightmost(vertex_descriptor u, compact_binary_tree &g)
+//     {
+//       while (true)
+//         if (g.nodes[u].rlink != null_vertex())
+//           u += g.nodes[u].rlink;
+//         else if (g.nodes[u].ltag)
+//           u++;
+//         else
+//           return u;
+//     }
 
     friend
     void
@@ -797,8 +767,28 @@ namespace boost
     }
 
   private:
-    std::vector<compact_node> nodes;
-    std::vector<vertex_descriptor> roots;
+    bool ltag(vertex_descriptor u) const
+    {
+      return nodes[2 * u];
+    }
+
+    bool rtag(vertex_descriptor u) const
+    {
+      return nodes[2 * u + 1];
+    }
+
+    bool ltag(vertex_descriptor u, bool value)
+    {
+      return nodes[2 * u] = value;
+    }
+
+    bool rtag(vertex_descriptor u, bool value)
+    {
+      return nodes[2 * u + 1] = value;
+    }
+
+    std::vector<bool> nodes;
+    // std::vector<vertex_descriptor> roots;
   };
 
 }

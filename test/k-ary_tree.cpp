@@ -23,13 +23,16 @@ void create_full_tree(MutableGraph &tree,
 {
   typedef typename boost::graph_traits<MutableGraph>::vertex_descriptor vertex_descriptor;
 
-  vertex_descriptor parent = 0;
-  for (vertex_descriptor child = 1; child != weight; child++)
+  vertex_descriptor child, parent = add_vertex(tree);
+
+  do
   {
+    child = add_vertex(tree);
     add_edge(parent, child, tree);
     if (!(child & 1))
       parent++;
   }
+  while (child != weight - 1);
 }
 
 template <typename Tree>
@@ -297,9 +300,6 @@ int test_main(int, char*[])
   VertexListGraph_test(forward_binary_tree());
   VertexListGraph_test(bidirectional_binary_tree());
   VertexListGraph_test(compact_binary_tree<>());
-
-  std::cout << "null: " << compact_binary_tree<>().null_vertex() << std::endl;
-  std::cout << "max_size: " << compact_binary_tree<>().max_size() << std::endl;
 
   return 0;
 }
