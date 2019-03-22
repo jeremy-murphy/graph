@@ -9,6 +9,7 @@
 #include <boost/graph/k-ary_tree.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graph_concepts.hpp>
+#include <boost/graph/compact_binary_tree.hpp>
 
 #include <boost/test/minimal.hpp>
 #include <boost/array.hpp>
