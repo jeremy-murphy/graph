@@ -726,21 +726,41 @@ namespace boost
         return std::make_pair(new_edge, true);
       }
 
-    // 11 00 11 00 00 00
-
     }
 
-//     friend
-//     vertex_descriptor rightmost(vertex_descriptor u, compact_binary_tree &g)
-//     {
-//       while (true)
-//         if (g.nodes[u].rlink != null_vertex())
-//           u += g.nodes[u].rlink;
-//         else if (g.nodes[u].ltag)
-//           u++;
-//         else
-//           return u;
-//     }
+    /*
+     *            a
+     *           / \
+     *          b   c
+     *         /   / \
+     *        d   e   f
+     *
+     *  11 10 00 11 00 00
+     *0  1  1  0  1  0  *
+     */
+
+    friend
+    vertex_descriptor rightmost(vertex_descriptor u, compact_binary_tree &g)
+    {
+      unsigned i = 0;
+
+      bool left = has_left_successor(u, g);
+      bool right = has_right_successor(u, g);
+
+      while (right || left || i)
+      {
+        if (!left)
+          i--;
+        if (right)
+          i++;
+
+        u++;
+        left = has_left_successor(u, g);
+        right = has_right_successor(u, g);
+      }
+
+      return u;
+    }
 
     friend
     void

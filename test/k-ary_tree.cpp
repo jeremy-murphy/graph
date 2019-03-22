@@ -262,6 +262,17 @@ void VertexListGraph_test(boost::compact_binary_tree<Vertex> const &)
   BOOST_CHECK(actual == expected);
 }
 
+void test_rightmost()
+{
+  typedef boost::compact_binary_tree<> BinaryTree;
+  BinaryTree tree;
+  typedef boost::graph_traits<BinaryTree>::vertex_descriptor vertex_descriptor;
+
+  create_full_tree(tree, 7);
+  vertex_descriptor result = rightmost(0, tree);
+  BOOST_CHECK(result == 6);
+}
+
 int test_main(int, char*[])
 {
   using namespace boost::concepts;
@@ -299,6 +310,7 @@ int test_main(int, char*[])
 
   VertexListGraph_test(forward_binary_tree());
   VertexListGraph_test(bidirectional_binary_tree());
+  test_rightmost();
   VertexListGraph_test(compact_binary_tree<>());
 
   return 0;
