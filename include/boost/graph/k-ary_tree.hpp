@@ -686,7 +686,7 @@ namespace boost
     friend
     vertex_size_type num_vertices(compact_binary_tree const& g)
     {
-      return 2 * g.nodes.size();
+      return g.nodes.size() / 2;
     }
 
     friend
