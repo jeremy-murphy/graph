@@ -6,15 +6,21 @@
 // http://www.boost.org/LICENSE_1_0.txt)
 //=======================================================================
 
+#define BOOST_TEST_MODULE k-ary tree
+#define BOOST_TEST_DYN_LINK
+
 #include <boost/graph/k-ary_tree.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graph_concepts.hpp>
 #include <boost/graph/compact_binary_tree.hpp>
 
-#include <boost/test/minimal.hpp>
+#include <boost/test/unit_test.hpp>
+
 #include <boost/array.hpp>
 #include <boost/range.hpp>
 #include <boost/range/algorithm.hpp>
+
+#include <boost/mpl/list.hpp>
 
 #include <utility>
 
@@ -234,9 +240,11 @@ void binary_tree()
   BOOST_CHECK(!has_right_successor(added[0], tree));
 }
 
+BOOST_AUTO_TEST_SUITE(VertexListGraphSemantics);
 
-template <typename Tree>
-void VertexListGraph_test(Tree const &)
+typedef boost::mpl::list<boost::forward_binary_tree, boost::bidirectional_binary_tree> trees;
+
+BOOST_AUTO_TEST_CASE_TEMPLATE(VLG, Tree, trees)
 {
   Tree tree;
   typedef typename boost::graph_traits<Tree>::vertex_descriptor vertex_descriptor;
@@ -246,14 +254,14 @@ void VertexListGraph_test(Tree const &)
   boost::array<vertex_descriptor, 7> actual,
                                       expected = {{3, 1, 4, 0, 5, 2, 6}};
   boost::copy(vertices(tree), boost::begin(actual));
-  BOOST_CHECK(actual == expected);
+  BOOST_TEST(actual == expected);
 }
 
-template <typename Vertex>
-void VertexListGraph_test(boost::compact_binary_tree<Vertex> const &)
+BOOST_AUTO_TEST_CASE(compact_binary_tree_test)
 {
-  boost::compact_binary_tree<Vertex> tree;
-  typedef Vertex vertex_descriptor;
+  boost::compact_binary_tree<> tree;
+
+  typedef boost::compact_binary_tree<>::vertex_descriptor vertex_descriptor;
 
   create_full_tree(tree, 7);
 
@@ -263,7 +271,9 @@ void VertexListGraph_test(boost::compact_binary_tree<Vertex> const &)
   BOOST_CHECK(actual == expected);
 }
 
-void test_rightmost()
+BOOST_AUTO_TEST_SUITE_END();
+
+BOOST_AUTO_TEST_CASE(test_rightmost)
 {
   typedef boost::compact_binary_tree<> BinaryTree;
   BinaryTree tree;
@@ -271,7 +281,7 @@ void test_rightmost()
 
   create_full_tree(tree, 7);
   vertex_descriptor result = rightmost(0, tree);
-  BOOST_CHECK(result == 6);
+  BOOST_TEST(result == 6);
 }
 
 int test_main(int, char*[])
@@ -308,11 +318,6 @@ int test_main(int, char*[])
   depth_first_search<1>();
 
   mutable_bidirectional();
-
-  VertexListGraph_test(forward_binary_tree());
-  VertexListGraph_test(bidirectional_binary_tree());
-  test_rightmost();
-  VertexListGraph_test(compact_binary_tree<>());
 
   return 0;
 }

@@ -4,7 +4,7 @@ project(Boost.Graph)
 enable_testing()
 
 # set(CMAKE_CXX_STANDARD 03)
-find_package(Boost REQUIRED unit_test_framework)
+find_package(Boost REQUIRED COMPONENTS timer unit_test_framework)
 
 # Yes, I'm cheating.
 include_directories(${Boost_INCLUDE_DIRS})
