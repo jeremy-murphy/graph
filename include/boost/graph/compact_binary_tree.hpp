@@ -3,6 +3,8 @@
 
 #include <boost/config.hpp>
 
+#include <boost/dynamic_bitset.hpp>
+
 #include <boost/graph/graph_traits.hpp>
 
 #include <boost/iterator/counting_iterator.hpp> // compact
@@ -10,7 +12,6 @@
 #include <boost/static_assert.hpp>
 
 #include <utility>
-#include <vector>
 
 namespace boost
 {
@@ -32,8 +33,7 @@ namespace boost
     class traversal_category : public vertex_list_graph_tag {};
 
   private:
-    typedef typename std::vector<bool>::iterator node_iterator;
-    typedef typename std::vector<bool>::const_iterator const_node_iterator;
+    typedef boost::dynamic_bitset<> storage_type;
 
   public:
     friend
@@ -195,7 +195,7 @@ namespace boost
       return nodes[2 * u + 1] = value;
     }
 
-    std::vector<bool> nodes;
+    storage_type nodes;
     // std::vector<vertex_descriptor> roots;
   };
 
