@@ -9,12 +9,13 @@
 #define BOOST_TEST_MODULE k-ary tree
 #define BOOST_TEST_DYN_LINK
 
+#include <boost/test/unit_test.hpp>
+
 #include <boost/graph/k-ary_tree.hpp>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/graph_concepts.hpp>
 #include <boost/graph/compact_binary_tree.hpp>
 
-#include <boost/test/unit_test.hpp>
 
 #include <boost/array.hpp>
 #include <boost/range.hpp>
@@ -244,6 +245,15 @@ BOOST_AUTO_TEST_SUITE(VertexListGraphSemantics);
 
 typedef boost::mpl::list<boost::forward_binary_tree, boost::bidirectional_binary_tree> trees;
 
+namespace boost
+{
+  template <std::size_t K, bool Predecessor, typename Vertex>
+  std::ostream& operator<<(std::ostream& os, k_ary_tree<K, Predecessor, Vertex> const& tree)
+  {
+    return os;
+  }
+}
+
 BOOST_AUTO_TEST_CASE_TEMPLATE(VLG, Tree, trees)
 {
   Tree tree;
@@ -272,6 +282,14 @@ BOOST_AUTO_TEST_CASE(compact_binary_tree_test)
 }
 
 BOOST_AUTO_TEST_SUITE_END();
+
+BOOST_AUTO_TEST_CASE(test_bit_rotate)
+{
+  typedef boost::array<unsigned int, 10> Array;
+  Array data;
+  int result = boost::bit_rotate(boost::begin(data), 0, 0, 0);
+}
+
 
 BOOST_AUTO_TEST_CASE(test_rightmost)
 {

@@ -11,10 +11,75 @@
 
 #include <boost/static_assert.hpp>
 
+#include <boost/concept_check.hpp>
+#include <boost/concept/assert.hpp>
+
+#include <boost/function.hpp>
+
 #include <utility>
 
 namespace boost
 {
+  template <typename IntegralIterator, typename Integer>
+  Integer bit_rotate(IntegralIterator start,
+                              Integer first, Integer middle, Integer last)
+  {
+    typedef typename std::iterator_traits<IntegralIterator>::value_type T;
+
+    std::size_t BOOST_CONSTEXPR width = sizeof(T) * CHAR_BIT;
+
+    BOOST_CONCEPT_ASSERT((Mutable_RandomAccessIterator<IntegralIterator>));
+    BOOST_ASSERT(first < width);
+    BOOST_ASSERT(first <= middle);
+    BOOST_ASSERT(middle <= last);
+
+    if (first == middle) return last;
+    if (middle == last) return first;
+
+    Integer const n = middle - first;
+    // 'first' is its own offset.
+    Integer middle_offset = middle % width;
+
+    IntegralIterator start2 = start + middle / width,
+                     start3 = start + last / width;
+
+    T first_mask = (T(1) << first) - T(1),
+      second_mask = (T(1) << middle_offset) - T(1);
+
+    // TODO: handle first T differently
+    Integer diff = middle % width - first;
+
+    T tmp = *start;
+
+    if (diff < 0)
+    {
+      *start = *start2 << -diff | *start & first_mask;
+      *start2 = tmp >> diff | *start2 & second_mask;
+    }
+    else
+    {
+      *start = *start2 >> diff | *(start2 + 1) << width - diff | *start & first_mask;
+      *start2 = tmp >> diff | *start2 & second_mask;
+    }
+
+
+    do
+    {
+      tmp = *start;
+      if (diff < 0)
+      {
+        *start = *start2 << -diff | *(start2 - 1) >> width + diff;
+        *start2 = tmp >> diff | *(start - 1) << width - diff;
+      }
+      else
+      {
+        *start = *start2 >> diff | *(start2 - 1) << width - diff;
+        *start2 = tmp << -diff | *(start - 1) >> width + diff;
+      }
+    }
+    while (start2 != start3);
+
+  }
 
   template <typename Vertex = short unsigned>
   class compact_binary_tree
@@ -112,6 +177,12 @@ namespace boost
         BOOST_ASSERT(!has_left_successor(u, g));
         g.ltag(u, 1);
         return std::make_pair(new_edge, true);
+      }
+
+      if (!has_left_successor(u, g))
+      {
+        // rotate the tree rooted at v to u + 1.
+
       }
 
     }
