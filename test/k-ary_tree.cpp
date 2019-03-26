@@ -279,9 +279,16 @@ BOOST_AUTO_TEST_CASE(test_bit_rotate)
   boost::dynamic_bitset<>  expected(std::string("0011001100110000000000000101010101110011001100000000000101010101"));
   boost::bit_rotate_block(*input.data(), 10, 30, 50);
   BOOST_TEST(input == expected);
-  //   0011001100110011001100110000000000000000000001010101010101010101
-  //   0011001100110000000000000101010101110011001100000000000101010101
 
+  input = boost::dynamic_bitset<>(std::string("0101111000110111000"));
+  boost::bit_rotate_block(*input.data(), 3, 12, 15);
+  expected = boost::dynamic_bitset<>(std::string("0101000110111111000"));
+  BOOST_TEST(input == expected);
+
+  input = boost::dynamic_bitset<>(std::string("0101111000110111000"));
+  boost::bit_rotate_block(*input.data(), 3, 6, 12);
+  expected = boost::dynamic_bitset<>(std::string("0101111111000110000"));
+  BOOST_TEST(input == expected);
 }
 
 

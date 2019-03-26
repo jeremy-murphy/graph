@@ -31,10 +31,11 @@ namespace boost
 
     N first_mask = (N(1) << first) - N(1),
       second_mask = (N(1) << middle) - N(1),
-      third_mask = (N(1) << last) - N(1);
+      third_mask = (N(1) << last) - N(1),
+      other_mask = (N(1) << first + last - middle) - N(1);
 
     N a = (block >> middle - first) & (second_mask ^ first_mask), // new start
-      b = (block << last - middle) & ~(second_mask | ~third_mask), // rotate old start to the end
+      b = (block << last - middle) & (third_mask ^ other_mask), // rotate old start to the end
       c = block & (first_mask | ~third_mask); // outside
     block = a | b | c;
     return;
