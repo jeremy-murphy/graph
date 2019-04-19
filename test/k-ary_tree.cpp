@@ -240,7 +240,7 @@ void binary_tree()
   BOOST_CHECK(!has_right_successor(added[0], tree));
 }
 
-BOOST_AUTO_TEST_SUITE(VertexListGraphSemantics);
+BOOST_AUTO_TEST_SUITE(VertexListGraphSemantics)
 
 typedef boost::mpl::list<boost::forward_binary_tree, boost::bidirectional_binary_tree> trees;
 
@@ -254,42 +254,110 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(VLG, Tree, trees)
   boost::array<vertex_descriptor, 7> actual,
                                       expected = {{3, 1, 4, 0, 5, 2, 6}};
   boost::copy(vertices(tree), boost::begin(actual));
-  BOOST_TEST(actual == expected);
+  BOOST_CHECK_EQUAL_COLLECTIONS(actual.begin(), actual.end(), expected.begin(), expected.end());
 }
 
-BOOST_AUTO_TEST_CASE(compact_binary_tree_test)
+// BOOST_AUTO_TEST_CASE(compact_binary_tree_test)
+// {
+//   boost::compact_binary_tree<> tree;
+//
+//   typedef boost::compact_binary_tree<>::vertex_descriptor vertex_descriptor;
+//
+//   create_full_tree(tree, 7);
+//
+//   boost::array<vertex_descriptor, 7> actual,
+//                                      expected = {{0, 1, 2, 3, 4, 5, 6}};
+//   boost::copy(vertices(tree), boost::begin(actual));
+//   BOOST_CHECK_EQUAL_COLLECTIONS(actual.begin(), actual.end(), expected.begin(), expected.end());
+// }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+BOOST_AUTO_TEST_CASE(test_copy_to_unaligned_bits)
 {
-  boost::compact_binary_tree<> tree;
+  boost::array<char unsigned, 10> source = { 0xAA, 0x11, 0x22, 0x33, 0x44,
+                                             0x55, 0x66, 0x77, 0x88, 0x99 };
+  boost::array<char unsigned, 10> dest = {0};
 
-  typedef boost::compact_binary_tree<>::vertex_descriptor vertex_descriptor;
+  dest[0] = 0xFF;
+  BOOST_CHECK_EQUAL(dest.begin() + 1, boost::copy_bits(source.begin(), 4, dest.begin(), 2));
+  BOOST_CHECK_EQUAL(dest[0], 0xEB);
+  dest[0] = 0x00;
 
-  create_full_tree(tree, 7);
+  BOOST_CHECK_EQUAL(dest.begin() + 1, boost::copy_bits(source.begin(), 6, dest.begin(), 2));
+  BOOST_CHECK_EQUAL(dest[0], 0xA8);
+  dest[0] = 0x00;
 
-  boost::array<vertex_descriptor, 7> actual,
-                                     expected = {{0, 1, 2, 3, 4, 5, 6}};
-  boost::copy(vertices(tree), boost::begin(actual));
-  BOOST_CHECK(actual == expected);
+  BOOST_CHECK_EQUAL(dest.begin() + 2, boost::copy_bits(source.begin(), 8, dest.begin(), 2));
+  BOOST_CHECK_EQUAL(dest[0], 0xA8);
+  BOOST_CHECK_EQUAL(dest[1], 0x02);
+
+  dest[0] = dest[1] = 0x00;
+
+  BOOST_CHECK_EQUAL(dest.begin() + 3, boost::copy_bits(source.begin(), 16, dest.begin(), 2));
+  BOOST_CHECK_EQUAL(dest[0], 0xA8);
+  BOOST_CHECK_EQUAL(dest[1], 0x46);
+
+  dest[0] = dest[1] = 0x00;
+
+  BOOST_CHECK_EQUAL(dest.begin() + 2, boost::copy_bits(source.begin(), 16, dest.begin(), 0));
+  BOOST_CHECK_EQUAL(dest[0], source[0]);
+  BOOST_CHECK_EQUAL(dest[1], source[1]);
 }
 
-BOOST_AUTO_TEST_SUITE_END();
 
-BOOST_AUTO_TEST_CASE(test_bit_rotate)
+BOOST_AUTO_TEST_CASE(test_copy_from_unaligned_bits)
+{
+  boost::array<char unsigned, 10> source = { 0xAA, 0x11, 0x22, 0x33, 0x44,
+                                             0x55, 0x66, 0x77, 0x88, 0x99 };
+  boost::array<char unsigned, 10> dest = {0};
+
+  // dest[0] = 0xFF;
+  BOOST_CHECK_EQUAL(dest.begin() + 1,
+                    boost::copy_bits(source.begin(), 2, 4, dest.begin()));
+  BOOST_CHECK_EQUAL(dest[0], 0x0A);
+  dest[0] = 0x00;
+
+}
+
+BOOST_AUTO_TEST_CASE(test_bit_rotate_block)
 {
   boost::dynamic_bitset<> input(std::string("0011001100110011001100110000000000000000000001010101010101010101"));
   boost::dynamic_bitset<>  expected(std::string("0011001100110000000000000101010101110011001100000000000101010101"));
   boost::bit_rotate_block(*input.data(), 10, 30, 50);
-  BOOST_TEST(input == expected);
+  BOOST_CHECK_EQUAL(input, expected);
 
   input = boost::dynamic_bitset<>(std::string("0101111000110111000"));
   boost::bit_rotate_block(*input.data(), 3, 12, 15);
   expected = boost::dynamic_bitset<>(std::string("0101000110111111000"));
-  BOOST_TEST(input == expected);
+  BOOST_CHECK_EQUAL(input, expected);
 
   input = boost::dynamic_bitset<>(std::string("0101111000110111000"));
   boost::bit_rotate_block(*input.data(), 3, 6, 12);
   expected = boost::dynamic_bitset<>(std::string("0101111111000110000"));
-  BOOST_TEST(input == expected);
+  BOOST_CHECK_EQUAL(input, expected);
 }
+
+/*
+BOOST_AUTO_TEST_CASE(test_bit_rotate_two_blocks)
+{
+  boost::dynamic_bitset<char unsigned>    input(std::string("1111111100000000"));
+  boost::dynamic_bitset<char unsigned> expected(std::string("1111100000011100"));
+  boost::bit_rotate_two_blocks(input.data(), 1, 7, 11);
+
+  BOOST_CHECK_EQUAL(input, expected);
+
+}
+
+BOOST_AUTO_TEST_CASE(test_bit_rotate_blocks)
+{
+  boost::dynamic_bitset<char unsigned> input(std::string("001100110101010100000000"));
+  boost::dynamic_bitset<char unsigned> expected(std::string("001100010100110101000000"));
+  boost::bit_rotate_reverse(input.data(), 6, 12, 20);
+  // BOOST_CHECK_EQUAL(input, expected);
+
+}
+*/
 
 
 BOOST_AUTO_TEST_CASE(test_rightmost)
@@ -300,7 +368,7 @@ BOOST_AUTO_TEST_CASE(test_rightmost)
 
   create_full_tree(tree, 7);
   vertex_descriptor result = rightmost(0, tree);
-  BOOST_TEST(result == 6);
+  // BOOST_TEST(result == 6);
 }
 
 int test_main(int, char*[])
