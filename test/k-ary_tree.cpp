@@ -314,8 +314,33 @@ BOOST_AUTO_TEST_CASE(test_copy_from_unaligned_bits)
 
   // dest[0] = 0xFF;
   BOOST_CHECK_EQUAL(dest.begin() + 1,
+                    boost::copy_bits(source.begin(), 0, 8, dest.begin()));
+  BOOST_CHECK_EQUAL(dest[0], 0xAA);
+  BOOST_CHECK_EQUAL(dest[1], 0x00);
+  dest[0] = 0x00;
+
+  BOOST_CHECK_EQUAL(dest.begin() + 1,
                     boost::copy_bits(source.begin(), 2, 4, dest.begin()));
   BOOST_CHECK_EQUAL(dest[0], 0x0A);
+  BOOST_CHECK_EQUAL(dest[1], 0x00);
+  dest[0] = 0x00;
+
+  BOOST_CHECK_EQUAL(dest.begin() + 1,
+                    boost::copy_bits(source.begin(), 4, 4, dest.begin()));
+  BOOST_CHECK_EQUAL(dest[0], 0x0A);
+  BOOST_CHECK_EQUAL(dest[1], 0x00);
+  dest[0] = 0x00;
+
+  BOOST_CHECK_EQUAL(dest.begin() + 1,
+                    boost::copy_bits(source.begin(), 4, 8, dest.begin()));
+  BOOST_CHECK_EQUAL(dest[0], 0x1A);
+  BOOST_CHECK_EQUAL(dest[1], 0x00);
+  dest[0] = dest[1] = 0x00;
+
+  BOOST_CHECK_EQUAL(dest.begin() + 2,
+                    boost::copy_bits(source.begin(), 4, 16, dest.begin()));
+  BOOST_CHECK_EQUAL(dest[0], 0x1A);
+  BOOST_CHECK_EQUAL(dest[1], 0x1A);
   dest[0] = 0x00;
 
 }

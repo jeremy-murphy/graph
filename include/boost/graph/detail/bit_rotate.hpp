@@ -78,30 +78,34 @@ namespace boost
 
     if (leading_offset != 0)
     {
-      T leading_data = *source >> leading_offset;
+      T leading_data = *source++ >> leading_offset;
+      T trailing_data = *dest & ~trailing_mask;
 
       if (source_blocks > 1)
-      {
-        T const trailing_data = (*(source + 1) << width - leading_offset) & ~trailing_mask;
-        *dest++ = leading_data | trailing_data;
-      }
+        trailing_data |= (*source << width - leading_offset) & ~trailing_mask;
       else
-      {
-        T const trailing_data = *dest & ~trailing_mask;
         leading_data &= trailing_mask;
-        *dest++ = leading_data | trailing_data;
-      }
 
+      *dest++ = leading_data | trailing_data;
+
+      if (dest_blocks == 1)
+        return dest;
     }
     else
-      dest = std::copy(source, source + source_blocks - 1, dest);
-
-    if (trailing_offset != 0)
     {
+      dest = std::copy(source, source + source_blocks - 1, dest);
+      source += source_blocks - 1;
+    }
 
+    if (leading_offset != 0)
+    {
+      T const a = *source++ >> leading_offset;
+      T const b = *source << width - leading_offset & ~trailing_mask;
+      T const dest_trail = *dest & ~trailing_mask;
+      *dest++ = a | b | dest_trail;
     }
     else
-      *dest++ = *(source + source_blocks - 1);
+      *dest++ = *source;
 
     return dest;
   }
@@ -149,10 +153,10 @@ namespace boost
       *dest = *dest & leading_mask | *source << leading_offset;
       dest++;
 
-      for (int i = 0; i != dest_blocks - 2; i++, source++)
+      for (int i = 0; i != dest_blocks - 2; i++)
       {
-        T const a = *source >> width - leading_offset;
-        T const b = *(source + 1) << leading_offset;
+        T const a = *source++ >> width - leading_offset;
+        T const b = *source << leading_offset;
         *dest++ = a | b;
       }
     }
