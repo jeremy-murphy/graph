@@ -44,14 +44,14 @@ namespace boost
     if (middle == last) return first;
 
     N first_mask = (N(1) << first) - N(1),
-      second_mask = (N(1) << middle) - N(1),
-      third_mask = (N(1) << last) - N(1),
-      other_mask = (N(1) << first + last - middle) - N(1);
+      middle_mask = (N(1) << middle) - N(1),
+      last_mask = (N(1) << last) - N(1),
+      new_middle_mask = (N(1) << first + last - middle) - N(1);
 
     N const k = middle - first;
-    N a = (block >> k) & (second_mask ^ first_mask), // new start
-      b = (block << last - middle) & (third_mask ^ other_mask), // rotate old start to the end
-      c = block & (first_mask | ~third_mask); // outside
+    N a = (block >> k) & (middle_mask ^ first_mask), // new start
+      b = (block << last - middle) & (last_mask ^ new_middle_mask), // rotate old start to the end
+      c = block & (first_mask | ~last_mask); // outside
     block = a | b | c;
     return last - k;
   }
