@@ -90,6 +90,13 @@ namespace boost
 
       if (dest_blocks == 1)
         return dest;
+
+      for (int i = 0; i != dest_blocks - 2; i++)
+      {
+        T const a = *source++ >> leading_offset;
+        T const b = *source << width - leading_offset;
+        *dest++ = a | b;
+      }
     }
     else
     {
