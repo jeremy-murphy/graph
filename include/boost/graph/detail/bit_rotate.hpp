@@ -75,22 +75,26 @@ namespace boost
 
     T const leading_mask = (T(1) << leading_offset) - T(1);
     T const trailing_mask = (T(1) << trailing_offset) - T(1);
-    T const inverse_leading_mask = (T(1) << width - leading_offset) - T(1);
 
     if (leading_offset != 0)
     {
       if (dest_blocks == 1)
       {
         T data = *source++ >> leading_offset;
+        if (source_blocks > 1)
+        {
+          T const mirror_leading_mask = (T(1) << width - leading_offset) - T(1);
+          data |= (*source << width - leading_offset) & ~mirror_leading_mask;
+        }
         if (trailing_mask)
           data &= trailing_mask;
-        if (source_blocks > 1)
-          data |= (*source << width - leading_offset) & ~inverse_leading_mask;
         T const tail = trailing_mask ? *dest & ~trailing_mask : 0;
         *dest++ = data | tail;
         return dest;
       }
 
+      assert(dest_blocks > 1);
+      assert(source_blocks > 1);
 
       for (int i = 0; i != dest_blocks - 1; i++)
       {
