@@ -75,7 +75,7 @@ else()
     
     # TODO: The super-project version is set explicitly just like this, but we 
     # should parse it from boost/version.hpp.
-    find_package(Boost 1.90.0 CONFIG REQUIRED COMPONENTS regex)
+    find_package(Boost 1.92.0 CONFIG REQUIRED COMPONENTS regex)
 
     add_library(boost_graph)
     target_sources(boost_graph PUBLIC
