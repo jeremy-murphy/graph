@@ -39,7 +39,6 @@
 // there are some graph algorithms that use these functions.
 
 #include <algorithm>
-#include <vector>
 #include <boost/range/begin.hpp>
 #include <boost/range/end.hpp>
 #include <boost/range/algorithm/copy.hpp>

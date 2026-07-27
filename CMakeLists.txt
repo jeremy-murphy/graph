@@ -270,3 +270,8 @@ if(BUILD_TESTING AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/test/CMakeLists.txt")
   add_subdirectory(test)
 
 endif()
+
+set(BUILD_BENCHMARKS YES CACHE BOOL "Choose to build benchmarks, requires Google Benchmark")
+if(BUILD_BENCHMARKS)
+  add_subdirectory(benchmark)
+endif()
