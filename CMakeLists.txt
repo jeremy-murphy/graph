@@ -229,6 +229,26 @@ else()
             include/boost/graph/visitors.hpp
             include/boost/graph/wavefront.hpp
             include/boost/graph/write_dimacs.hpp
+
+            include/boost/detail/algorithm.hpp
+
+            include/boost/pending/bucket_sorter.hpp
+            include/boost/pending/container_traits.hpp
+            include/boost/pending/disjoint_sets.hpp
+            include/boost/pending/fenced_priority_queue.hpp
+            include/boost/pending/fibonacci_heap.hpp
+            include/boost/pending/indirect_cmp.hpp
+            include/boost/pending/is_heap.hpp
+            include/boost/pending/mutable_heap.hpp
+            include/boost/pending/mutable_queue.hpp
+            include/boost/pending/property.hpp
+            include/boost/pending/property_serialize.hpp
+            include/boost/pending/queue.hpp
+            include/boost/pending/relaxed_heap.hpp
+            include/boost/pending/stringtok.hpp
+
+            include/boost/pending/detail/disjoint_sets.hpp
+            include/boost/pending/detail/property.hpp
         PRIVATE
             src/graphml.cpp
             src/read_graphviz_new.cpp
