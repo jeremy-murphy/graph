@@ -75,7 +75,9 @@ else()
     
     # TODO: The super-project version is set explicitly just like this, but we 
     # should parse it from boost/version.hpp.
-    find_package(Boost 1.92.0 CONFIG REQUIRED COMPONENTS regex)
+    # set(Boost_DEBUG ON)
+    set(Boost_NO_SYSTEM_PATHS ON)
+    find_package(Boost 1.92.0 CONFIG REQUIRED COMPONENTS regex PATHS "../../stage/lib/cmake/Boost-1.92.0")
 
     add_library(boost_graph)
     target_sources(boost_graph PUBLIC
