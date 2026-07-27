@@ -69,7 +69,7 @@ target_compile_definitions(boost_graph
 
 else()
     cmake_minimum_required(VERSION 3.30)
-    project(boost_graph VERSION 1.0.0 LANGUAGES CXX)
+    project(boost_graph VERSION 1.0.0)
     
     set(CMAKE_CXX_STANDARD 14)
     
