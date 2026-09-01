@@ -60,17 +60,16 @@ target_compile_definitions(boost_graph
 )
 
 else()
-    # When we're worked on by Boost.Graph developers.
-    # Using 3.29 for now until I figure out the differences with the new Boost
-    # config cmake introduced in 3.30.
-    cmake_minimum_required(VERSION 3.29)
-    project(boost_graph VERSION 1.0.0 LANGUAGES CXX)
+    cmake_minimum_required(VERSION 3.30)
+    project(boost_graph VERSION 1.0.0)
     
     set(CMAKE_CXX_STANDARD 14)
     
     # TODO: The super-project version is set explicitly just like this, but we 
     # should parse it from boost/version.hpp.
-    find_package(Boost 1.90.0 REQUIRED COMPONENTS regex)
+    # set(Boost_DEBUG ON)
+    set(Boost_NO_SYSTEM_PATHS ON)
+    find_package(Boost 1.92.0 CONFIG REQUIRED COMPONENTS regex PATHS "../../stage/lib/cmake/Boost-1.92.0")
 
     add_library(boost_graph)
     target_sources(boost_graph PUBLIC
@@ -222,6 +221,26 @@ else()
             include/boost/graph/visitors.hpp
             include/boost/graph/wavefront.hpp
             include/boost/graph/write_dimacs.hpp
+
+            include/boost/detail/algorithm.hpp
+
+            include/boost/pending/bucket_sorter.hpp
+            include/boost/pending/container_traits.hpp
+            include/boost/pending/disjoint_sets.hpp
+            include/boost/pending/fenced_priority_queue.hpp
+            include/boost/pending/fibonacci_heap.hpp
+            include/boost/pending/indirect_cmp.hpp
+            include/boost/pending/is_heap.hpp
+            include/boost/pending/mutable_heap.hpp
+            include/boost/pending/mutable_queue.hpp
+            include/boost/pending/property.hpp
+            include/boost/pending/property_serialize.hpp
+            include/boost/pending/queue.hpp
+            include/boost/pending/relaxed_heap.hpp
+            include/boost/pending/stringtok.hpp
+
+            include/boost/pending/detail/disjoint_sets.hpp
+            include/boost/pending/detail/property.hpp
         PRIVATE
             src/graphml.cpp
             src/read_graphviz_new.cpp
