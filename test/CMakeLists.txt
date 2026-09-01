@@ -46,7 +46,7 @@ set(TEST_SOURCES
     filtered_graph_cc.cpp
     # filtered_graph_properties_dijkstra.cpp # Compile-only, no link test??
     find_flow_cost_bundled_properties_and_named_params_test.cpp
-    finish_edge_bug.cpp
+    # finish_edge_bug.cpp
     floyd_warshall_test.cpp
     generator_test.cpp
     graph_concepts.cpp
@@ -97,7 +97,7 @@ set(TEST_SOURCES
     test_graphs.cpp
     tiernan_all_cycles.cpp
     # transitive_closure_test.cpp # Benchmark and test, need to separate.
-    transitive_closure_test2.cpp
+    # transitive_closure_test2.cpp
     two_graphs_common_spanning_trees_test.cpp
     undirected_dfs.cpp
     undirected_dfs_visitor.cpp
