@@ -1,0 +1,6 @@
+name: graph
+version: ~
+title: Boost.Graph
+start_page: index.adoc
+nav:
+  - modules/ROOT/nav.adoc

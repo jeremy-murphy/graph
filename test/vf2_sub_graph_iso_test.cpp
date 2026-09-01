@@ -67,20 +67,13 @@ void randomly_permute_graph(Graph1& g1, const Graph2& g2)
     typedef typename graph_traits< Graph1 >::vertex_iterator vertex_iterator;
     typedef typename graph_traits< Graph2 >::edge_iterator edge_iterator;
 
-    random_generator_type gen;
-#ifndef BOOST_NO_CXX98_RANDOM_SHUFFLE
-    random_functor< random_generator_type > rand_fun(gen);
-#endif
+    random_generator_type gen(42);
 
     // Decide new order
     std::vector< vertex2 > orig_vertices;
     std::copy(vertices(g2).first, vertices(g2).second,
         std::back_inserter(orig_vertices));
-#ifndef BOOST_NO_CXX98_RANDOM_SHUFFLE
-    std::random_shuffle(orig_vertices.begin(), orig_vertices.end(), rand_fun);
-#else
     std::shuffle(orig_vertices.begin(), orig_vertices.end(), gen);
-#endif
     std::map< vertex2, vertex1 > vertex_map;
 
     std::size_t i = 0;
@@ -116,7 +109,7 @@ void generate_random_digraph(Graph& g, double edge_probability,
     BOOST_TEST(0 <= max_vertex_name);
 
     typedef typename graph_traits< Graph >::vertex_iterator vertex_iterator;
-    random_generator_type random_gen;
+    random_generator_type random_gen(42);
     boost::uniform_real< double > dist_real(0.0, 1.0);
     boost::variate_generator< random_generator_type&,
         boost::uniform_real< double > >

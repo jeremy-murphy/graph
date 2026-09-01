@@ -16,7 +16,7 @@
 
 typedef boost::adjacency_list< boost::vecS, boost::vecS, boost::directedS > G;
 
-int main(int argc, char** argv)
+int main()
 {
     size_t n = 10;
     G g(n);
@@ -37,7 +37,7 @@ int main(int argc, char** argv)
 
     for (size_t k = 0; k < n; ++k)
     {
-        BOOST_TEST(o[io[k]] == k);
+        BOOST_TEST(o[io[k]] == static_cast< int >(k));
     }
 
     return boost::report_errors();

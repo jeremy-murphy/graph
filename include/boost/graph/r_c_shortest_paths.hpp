@@ -13,8 +13,7 @@
 #include <vector>
 #include <list>
 
-#include <boost/make_shared.hpp>
-#include <boost/enable_shared_from_this.hpp>
+#include <memory>
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/iteration_macros.hpp>
 #include <boost/property_map/property_map.hpp>
@@ -25,15 +24,13 @@ namespace boost
 // r_c_shortest_paths_label struct
 template < class Graph, class Resource_Container >
 struct r_c_shortest_paths_label
-: public boost::enable_shared_from_this<
-      r_c_shortest_paths_label< Graph, Resource_Container > >
 {
     r_c_shortest_paths_label(const unsigned long n,
         const Resource_Container& rc = Resource_Container(),
-        const boost::shared_ptr<
+        const std::shared_ptr<
             r_c_shortest_paths_label< Graph, Resource_Container > >
             pl
-        = boost::shared_ptr<
+        = std::shared_ptr<
             r_c_shortest_paths_label< Graph, Resource_Container > >(),
         const typename graph_traits< Graph >::edge_descriptor& ed
         = graph_traits< Graph >::edge_descriptor(),
@@ -59,7 +56,7 @@ struct r_c_shortest_paths_label
     }
     const unsigned long num;
     Resource_Container cumulated_resource_consumption;
-    const boost::shared_ptr<
+    const std::shared_ptr<
         r_c_shortest_paths_label< Graph, Resource_Container > >
         p_pred_label;
     const typename graph_traits< Graph >::edge_descriptor pred_edge;
@@ -119,56 +116,25 @@ inline bool operator>=(
     return l2 < l1 || l1 == l2;
 }
 
-template < typename Graph, typename Resource_Container >
-inline bool operator<(
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& t,
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& u)
-{
-    return *t < *u;
-}
-
-template < typename Graph, typename Resource_Container >
-inline bool operator<=(
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& t,
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& u)
-{
-    return *t <= *u;
-}
-
-template < typename Graph, typename Resource_Container >
-inline bool operator>(
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& t,
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& u)
-{
-    return *t > *u;
-}
-
-template < typename Graph, typename Resource_Container >
-inline bool operator>=(
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& t,
-    const boost::shared_ptr<
-        r_c_shortest_paths_label< Graph, Resource_Container > >& u)
-{
-    return *t >= *u;
-}
-
 namespace detail
 {
 
+    // Order by the pointed-to value, not by pointer identity. Works on any
+    // dereferenceable type.
+    template < class Pointer > struct deref_greater
+    {
+        bool operator()(const Pointer& a, const Pointer& b) const
+        {
+            return *a > *b;
+        }
+    };
+
     // r_c_shortest_paths_dispatch function (body/implementation)
-    template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+    template < class Graph, class VertexIndexMap,
         class Resource_Container, class Resource_Extension_Function,
         class Dominance_Function, class Label_Allocator, class Visitor >
     void r_c_shortest_paths_dispatch(const Graph& g,
         const VertexIndexMap& vertex_index_map,
-        const EdgeIndexMap& /*edge_index_map*/,
         typename graph_traits< Graph >::vertex_descriptor s,
         typename graph_traits< Graph >::vertex_descriptor t,
         // each inner vector corresponds to a pareto-optimal path
@@ -197,21 +163,20 @@ namespace detail
             template rebind_alloc<
                 r_c_shortest_paths_label< Graph, Resource_Container > >
                 LAlloc;
-        typedef std::allocator_traits< LAlloc > LTraits;
 #endif
         LAlloc l_alloc;
-        typedef boost::shared_ptr<
+        typedef std::shared_ptr<
             r_c_shortest_paths_label< Graph, Resource_Container > >
             Splabel;
         std::priority_queue< Splabel, std::vector< Splabel >,
-            std::greater< Splabel > >
+            deref_greater< Splabel > >
             unprocessed_labels;
 
         bool b_feasible = true;
-        Splabel splabel_first_label = boost::allocate_shared<
+        Splabel splabel_first_label = std::allocate_shared<
             r_c_shortest_paths_label< Graph, Resource_Container > >(l_alloc,
             i_label_num++, rc,
-            boost::shared_ptr<
+            std::shared_ptr<
                 r_c_shortest_paths_label< Graph, Resource_Container > >(),
             typename graph_traits< Graph >::edge_descriptor(), s);
 
@@ -400,7 +365,7 @@ namespace detail
                      oei != oei_end; ++oei)
                 {
                     b_feasible = true;
-                    Splabel new_label = boost::allocate_shared<
+                    Splabel new_label = std::allocate_shared<
                         r_c_shortest_paths_label< Graph, Resource_Container > >(
                         l_alloc, i_label_num++,
                         cur_label->cumulated_resource_consumption, cur_label,
@@ -433,7 +398,8 @@ namespace detail
         std::list< Splabel > dsplabels = get(vec_vertex_labels, t);
         if(!b_all_pareto_optimal_solutions)
         {
-            dsplabels.sort();
+            dsplabels.sort([](const Splabel& a, const Splabel& b)
+                { return *a < *b; });
         }
         typename std::list< Splabel >::const_iterator csi = dsplabels.begin();
         typename std::list< Splabel >::const_iterator csi_end = dsplabels.end();
@@ -444,7 +410,7 @@ namespace detail
             {
                 std::vector< typename graph_traits< Graph >::edge_descriptor >
                     cur_pareto_optimal_path;
-                boost::shared_ptr<
+                std::shared_ptr<
                     r_c_shortest_paths_label< Graph, Resource_Container > >
                     p_cur_label = *csi;
                 pareto_optimal_resource_containers.push_back(
@@ -527,16 +493,18 @@ struct default_r_c_shortest_paths_visitor
 // default_r_c_shortest_paths_allocator
 typedef std::allocator< int > default_r_c_shortest_paths_allocator;
 // default_r_c_shortest_paths_allocator
+// ---------------------------- New set of overloads
 
-// r_c_shortest_paths functions (handle/interface)
+
+
+// New r_c_shortest_paths functions (handle/interface)
 // first overload:
 // - return all pareto-optimal solutions
 // - specify Label_Allocator and Visitor arguments
-template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+template < class Graph, class VertexIndexMap,
     class Resource_Container, class Resource_Extension_Function,
     class Dominance_Function, class Label_Allocator, class Visitor >
 void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
-    const EdgeIndexMap& edge_index_map,
     typename graph_traits< Graph >::vertex_descriptor s,
     typename graph_traits< Graph >::vertex_descriptor t,
     // each inner vector corresponds to a pareto-optimal path
@@ -551,19 +519,19 @@ void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
     // to specify the memory management strategy for the labels
     Label_Allocator la, Visitor vis)
 {
-    r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t,
+    r_c_shortest_paths_dispatch(g, vertex_index_map, s, t,
         pareto_optimal_solutions, pareto_optimal_resource_containers, true, rc,
         ref, dominance, la, vis);
 }
 
+
 // second overload:
 // - return only one pareto-optimal solution
 // - specify Label_Allocator and Visitor arguments
-template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+template < class Graph, class VertexIndexMap,
     class Resource_Container, class Resource_Extension_Function,
     class Dominance_Function, class Label_Allocator, class Visitor >
 void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
-    const EdgeIndexMap& edge_index_map,
     typename graph_traits< Graph >::vertex_descriptor s,
     typename graph_traits< Graph >::vertex_descriptor t,
     std::vector< typename graph_traits< Graph >::edge_descriptor >&
@@ -581,7 +549,7 @@ void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
         std::vector< typename graph_traits< Graph >::edge_descriptor > >
         pareto_optimal_solutions;
     std::vector< Resource_Container > pareto_optimal_resource_containers;
-    r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t,
+    r_c_shortest_paths_dispatch(g, vertex_index_map, s, t,
         pareto_optimal_solutions, pareto_optimal_resource_containers, false, rc,
         ref, dominance, la, vis);
     if (!pareto_optimal_solutions.empty())
@@ -595,11 +563,10 @@ void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
 // third overload:
 // - return all pareto-optimal solutions
 // - use default Label_Allocator and Visitor
-template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+template < class Graph, class VertexIndexMap,
     class Resource_Container, class Resource_Extension_Function,
     class Dominance_Function >
 void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
-    const EdgeIndexMap& edge_index_map,
     typename graph_traits< Graph >::vertex_descriptor s,
     typename graph_traits< Graph >::vertex_descriptor t,
     // each inner vector corresponds to a pareto-optimal path
@@ -612,20 +579,20 @@ void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
     const Resource_Container& rc, const Resource_Extension_Function& ref,
     const Dominance_Function& dominance)
 {
-    r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t,
+    r_c_shortest_paths_dispatch(g, vertex_index_map, s, t,
         pareto_optimal_solutions, pareto_optimal_resource_containers, true, rc,
         ref, dominance, default_r_c_shortest_paths_allocator(),
         default_r_c_shortest_paths_visitor());
 }
 
+
 // fourth overload:
 // - return only one pareto-optimal solution
 // - use default Label_Allocator and Visitor
-template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+template < class Graph, class VertexIndexMap,
     class Resource_Container, class Resource_Extension_Function,
     class Dominance_Function >
 void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
-    const EdgeIndexMap& edge_index_map,
     typename graph_traits< Graph >::vertex_descriptor s,
     typename graph_traits< Graph >::vertex_descriptor t,
     std::vector< typename graph_traits< Graph >::edge_descriptor >&
@@ -641,7 +608,7 @@ void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
         std::vector< typename graph_traits< Graph >::edge_descriptor > >
         pareto_optimal_solutions;
     std::vector< Resource_Container > pareto_optimal_resource_containers;
-    r_c_shortest_paths_dispatch(g, vertex_index_map, edge_index_map, s, t,
+    r_c_shortest_paths_dispatch(g, vertex_index_map, s, t,
         pareto_optimal_solutions, pareto_optimal_resource_containers, false, rc,
         ref, dominance, default_r_c_shortest_paths_allocator(),
         default_r_c_shortest_paths_visitor());
@@ -652,7 +619,115 @@ void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
             = pareto_optimal_resource_containers[0];
     }
 }
+
+// ---------------------------- Old r_c_shortest_paths functions (handle/interface)
+// These functions are kept durign the deprecation cycle, but their logic falls back to the new functions
+
+
+// first overload:
+// - return all pareto-optimal solutions
+// - specify Label_Allocator and Visitor arguments
+template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+    class Resource_Container, class Resource_Extension_Function,
+    class Dominance_Function, class Label_Allocator, class Visitor >
+BOOST_DEPRECATED("edge_index_map is unused; drop it and call the 5-argument r_c_shortest_paths overload. Removal planned for Boost 1.95.")
+void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
+    const EdgeIndexMap& edge_index_map,
+    typename graph_traits< Graph >::vertex_descriptor s,
+    typename graph_traits< Graph >::vertex_descriptor t,
+    // each inner vector corresponds to a pareto-optimal path
+    std::vector<
+        std::vector< typename graph_traits< Graph >::edge_descriptor > >&
+        pareto_optimal_solutions,
+    std::vector< Resource_Container >& pareto_optimal_resource_containers,
+    // to initialize the first label/resource container
+    // and to carry the type information
+    const Resource_Container& rc, const Resource_Extension_Function& ref,
+    const Dominance_Function& dominance,
+    // to specify the memory management strategy for the labels
+    Label_Allocator la, Visitor vis)
+{
+    r_c_shortest_paths(g, vertex_index_map, s, t,
+        pareto_optimal_solutions, pareto_optimal_resource_containers, rc,
+        ref, dominance, la, vis);
+}
+
+// second overload:
+// - return only one pareto-optimal solution
+// - specify Label_Allocator and Visitor arguments
+template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+    class Resource_Container, class Resource_Extension_Function,
+    class Dominance_Function, class Label_Allocator, class Visitor >
+BOOST_DEPRECATED("edge_index_map is unused; drop it and call the 5-argument r_c_shortest_paths overload. Removal planned for Boost 1.95.")
+void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
+    const EdgeIndexMap& edge_index_map,
+    typename graph_traits< Graph >::vertex_descriptor s,
+    typename graph_traits< Graph >::vertex_descriptor t,
+    std::vector< typename graph_traits< Graph >::edge_descriptor >&
+        pareto_optimal_solution,
+    Resource_Container& pareto_optimal_resource_container,
+    // to initialize the first label/resource container
+    // and to carry the type information
+    const Resource_Container& rc, const Resource_Extension_Function& ref,
+    const Dominance_Function& dominance,
+    // to specify the memory management strategy for the labels
+    Label_Allocator la, Visitor vis)
+{
+    r_c_shortest_paths(g, vertex_index_map, s, t, pareto_optimal_solution, pareto_optimal_resource_container, rc, ref, dominance, la, vis);
+}
+
+// third overload:
+// - return all pareto-optimal solutions
+// - use default Label_Allocator and Visitor
+template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+    class Resource_Container, class Resource_Extension_Function,
+    class Dominance_Function >
+BOOST_DEPRECATED("edge_index_map is unused; drop it and call the 5-argument r_c_shortest_paths overload. Removal planned for Boost 1.95.")
+void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
+    const EdgeIndexMap& edge_index_map,
+    typename graph_traits< Graph >::vertex_descriptor s,
+    typename graph_traits< Graph >::vertex_descriptor t,
+    // each inner vector corresponds to a pareto-optimal path
+    std::vector<
+        std::vector< typename graph_traits< Graph >::edge_descriptor > >&
+        pareto_optimal_solutions,
+    std::vector< Resource_Container >& pareto_optimal_resource_containers,
+    // to initialize the first label/resource container
+    // and to carry the type information
+    const Resource_Container& rc, const Resource_Extension_Function& ref,
+    const Dominance_Function& dominance)
+{
+    r_c_shortest_paths(g, vertex_index_map, s, t,
+        pareto_optimal_solutions, pareto_optimal_resource_containers, rc,
+        ref, dominance, default_r_c_shortest_paths_allocator(),
+        default_r_c_shortest_paths_visitor());
+}
+
+// fourth overload:
+// - return only one pareto-optimal solution
+// - use default Label_Allocator and Visitor
+template < class Graph, class VertexIndexMap, class EdgeIndexMap,
+    class Resource_Container, class Resource_Extension_Function,
+    class Dominance_Function >
+BOOST_DEPRECATED("edge_index_map is unused; drop it and call the 5-argument r_c_shortest_paths overload. Removal planned for Boost 1.95.")
+void r_c_shortest_paths(const Graph& g, const VertexIndexMap& vertex_index_map,
+    const EdgeIndexMap& edge_index_map,
+    typename graph_traits< Graph >::vertex_descriptor s,
+    typename graph_traits< Graph >::vertex_descriptor t,
+    std::vector< typename graph_traits< Graph >::edge_descriptor >&
+        pareto_optimal_solution,
+    Resource_Container& pareto_optimal_resource_container,
+    // to initialize the first label/resource container
+    // and to carry the type information
+    const Resource_Container& rc, const Resource_Extension_Function& ref,
+    const Dominance_Function& dominance)
+{
+    r_c_shortest_paths(g, vertex_index_map, s, t, pareto_optimal_solution, pareto_optimal_resource_container, rc, ref, dominance);
+}
 // r_c_shortest_paths
+
+
+
 
 // check_r_c_path function
 template < class Graph, class Resource_Container,

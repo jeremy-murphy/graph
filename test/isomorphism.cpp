@@ -29,9 +29,7 @@
 #include <boost/random/uniform_real.hpp>
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/mersenne_twister.hpp>
-#include <boost/lexical_cast.hpp>
 
-#define BOOST_GRAPH_USE_SPIRIT_PARSER
 #include <boost/property_map/dynamic_property_map.hpp>
 #include <boost/graph/graphviz.hpp>
 
@@ -75,21 +73,13 @@ randomly_permute_graph(const Graph1& g1, Graph2& g2)
     typedef typename graph_traits< Graph2 >::vertex_descriptor vertex2;
     typedef typename graph_traits< Graph1 >::edge_iterator edge_iterator;
 
-    random_generator_type gen;
-
-#ifndef BOOST_NO_CXX98_RANDOM_SHUFFLE
-    random_functor< random_generator_type > rand_fun(gen);
-#endif
+    random_generator_type gen(42);
 
     // Decide new order
     std::vector< vertex1 > orig_vertices;
     std::copy(vertices(g1).first, vertices(g1).second,
         std::back_inserter(orig_vertices));
-#ifndef BOOST_NO_CXX98_RANDOM_SHUFFLE
-    std::random_shuffle(orig_vertices.begin(), orig_vertices.end(), rand_fun);
-#else
     std::shuffle(orig_vertices.begin(), orig_vertices.end(), gen);
-#endif
     std::map< vertex1, vertex2 > vertex_map;
 
     for (std::size_t i = 0; i < num_vertices(g1); ++i)
@@ -109,7 +99,7 @@ template < typename Graph >
 void generate_random_digraph(Graph& g, double edge_probability)
 {
     typedef typename graph_traits< Graph >::vertex_iterator vertex_iterator;
-    random_generator_type random_gen;
+    random_generator_type random_gen(42);
     boost::uniform_real< double > distrib(0.0, 1.0);
     boost::variate_generator< random_generator_type&,
         boost::uniform_real< double > >
@@ -301,14 +291,9 @@ void test_colored_isomorphism(int n, double edge_probability)
     std::fill(colors.begin(), midpoint, 0);
     std::fill(midpoint, colors.end(), 1);
 
-    random_generator_type gen;
+    random_generator_type gen(42);
 
-#ifndef BOOST_NO_CXX98_RANDOM_SHUFFLE
-    random_functor< random_generator_type > rand_fun(gen);
-    std::random_shuffle(colors.begin(), colors.end(), rand_fun);
-#else
     std::shuffle(colors.begin(), colors.end(), gen);
-#endif
 
     int v_idx = 0;
     for (graph1::vertex_iterator v = vertices(g1).first;
@@ -434,13 +419,13 @@ void loadGraphFromDOT(const std::string& filename, Graph& g)
 
 
 
-void test_github_issue_428()
+void test_github_issue_428(const std::string& data_dir)
 {
    using Graph = boost::adjacency_list<boost::vecS, boost::vecS, boost::bidirectionalS, VertexProps>;
    Graph g0;
    Graph g1;
-   loadGraphFromDOT("github-428-0.dot", g0);
-   loadGraphFromDOT("github-428-1.dot", g1);
+   loadGraphFromDOT(data_dir + "/github-428-0.dot", g0);
+   loadGraphFromDOT(data_dir + "/github-428-1.dot", g1);
 
    const bool iso = boost::isomorphism(g0, g1);
    BOOST_TEST(iso);
@@ -448,11 +433,14 @@ void test_github_issue_428()
 
 int main(int argc, char* argv[])
 {
-    int n = argc < 3 ? 30 : boost::lexical_cast< int >(argv[1]);
-    double edge_prob = argc < 3 ? 0.45 : boost::lexical_cast< double >(argv[2]);
+    // b2 passes the test directory (TEST_DIR) so the issue-428 data files are
+    // found regardless of the working directory the test runs from.
+    const std::string data_dir = argc >= 2 ? argv[1] : ".";
+    const int n = 30;
+    const double edge_prob = 0.45;
     test_isomorphism(n, edge_prob);
     test_colored_isomorphism(n, edge_prob);
-    test_github_issue_428();
+    test_github_issue_428(data_dir);
 
     return boost::report_errors();
 }

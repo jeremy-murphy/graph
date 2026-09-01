@@ -1,0 +1,282 @@
+= Subgraph
+
+An induced subgraph with a hierarchical parent/child structure.
+
+*Defined in:* `<boost/graph/subgraph.hpp>` +
+*Models:* VertexMutableGraph, EdgeMutableGraph (plus whatever the underlying
+graph models: VertexListGraph, EdgeListGraph, BidirectionalGraph, etc.)
+
+WARNING: The underlying graph type must have both `vertex_index` and
+`edge_index` internal properties. Edge indices are assigned by the subgraph
+class.
+
+== Example
+
+[source,cpp]
+----
+include::example$adaptors/subgraph.cpp[]
+----
+
+[,text]
+----
+include::example$adaptors/subgraph.txt[]
+----
+
+== Synopsis
+
+[source,cpp]
+----
+template <typename Graph>
+class subgraph;
+----
+
+`subgraph` represents parts of a single graph as independent graphs, without
+copying the data and without the parts drifting out of sync with the whole. All
+vertices and edges are stored once, in the root graph. Each subgraph is a
+lightweight view onto a subset of that storage which still behaves like a full
+graph, so it can be passed to any BGL algorithm.
+
+[TIP]
+====
+Consider a national road network: intersections are vertices and roads are
+edges. An analysis might focus on one city, then one district within that city,
+then compare against the whole country. Rather than three separate copies kept
+consistent by hand, `subgraph` keeps one dataset and offers lightweight views
+onto its parts. The country is the root, a city is a child subgraph, and a
+district is a child of that city. Each view behaves like a normal graph and can
+be handed to an algorithm such as `dijkstra_shortest_paths` exactly like any
+other BGL graph.
+====
+
+These views nest into a tree. The _root_ subgraph holds the entire graph and
+owns all of its vertices and edges. Each _child_ is a subset of its parent's
+vertices, and a child may in turn have children of its own. A child's edges are
+_induced_: an edge belongs to a child exactly when both of its endpoints do, so
+only vertices are ever added to a child, never edges directly.
+
+Because the storage is shared rather than copied, the levels stay linked in both
+directions. A property set at one level, such as an edge weight or a vertex
+color, is visible from every level. Adding a vertex or edge to a child also adds
+it to every ancestor up to the root, so an edit made while working on one part
+keeps the whole hierarchy consistent.
+
+Each subgraph numbers its own vertices and edges 0-based, as required by the
+many algorithms that assume a contiguous index space. A descriptor is therefore
+meaningful only within one subgraph. `local_to_global()` and `global_to_local()`
+translate a descriptor between a subgraph's local numbering and the root's.
+
+Choosing among the graph views:
+
+* `filtered_graph` for a read-only view that hides some vertices or edges.
+* `copy_graph` for an independent copy that does not stay linked to the original.
+* `subgraph` when mutability, per-region local numbering, and a parent/child
+  hierarchy over shared storage are all needed.
+
+== Template Parameters
+
+[cols="1,3",options="header"]
+|===
+| Parameter | Description
+
+| `Graph`
+| Must model VertexMutableGraph and EdgeMutableGraph. Must have internal
+  `vertex_index` and `edge_index` properties. With `vecS` for the vertex
+  container, `vertex_index` is automatic. `edge_index` must always be declared
+  explicitly:
+
+`adjacency_list<vecS, vecS, directedS, no_property, property<edge_index_t, int>>`
+|===
+
+== Member Functions
+
+=== Constructors
+
+[source,cpp]
+----
+subgraph(vertices_size_type n,
+         const GraphProperty& p = GraphProperty());
+----
+
+Create a root graph with `n` vertices and no edges.
+
+=== Subgraph Creation
+
+[source,cpp]
+----
+subgraph& create_subgraph();
+----
+
+Create an empty child subgraph.
+
+'''
+
+[source,cpp]
+----
+template <typename VertexIterator>
+subgraph& create_subgraph(VertexIterator first, VertexIterator last);
+----
+
+Create a child subgraph with the given vertices. Edges are induced from the
+parent.
+
+=== Descriptor Conversion
+
+[source,cpp]
+----
+vertex_descriptor local_to_global(vertex_descriptor u_local) const;
+vertex_descriptor global_to_local(vertex_descriptor u_global) const;
+edge_descriptor local_to_global(edge_descriptor e_local) const;
+edge_descriptor global_to_local(edge_descriptor e_global) const;
+----
+
+Convert between local (subgraph-relative) and global (root) descriptors.
+
+[WARNING]
+====
+These conversions have preconditions, and the two directions differ.
+
+* `global_to_local` requires that the element is in this subgraph. In debug
+builds a violation trips `BOOST_ASSERT`; with assertions disabled it returns a
+default-constructed descriptor (`null_vertex()` for vertices). When the element
+might not be present, query membership first with `find_vertex()` or
+`find_edge()`.
+* `local_to_global` requires a valid local descriptor of this subgraph. A
+violation is undefined behaviour (an unchecked lookup) in all build
+configurations.
+
+On the root subgraph every conversion is the identity, so any element is
+accepted.
+====
+
+'''
+
+[source,cpp]
+----
+std::pair<vertex_descriptor, bool>
+find_vertex(vertex_descriptor u_global) const;
+
+std::pair<edge_descriptor, bool>
+find_edge(edge_descriptor e_global) const;
+----
+
+Membership queries that never assert. `find_vertex` returns
+`(local_descriptor, true)` if the global vertex is in this subgraph, and
+`(null_vertex(), false)` otherwise. `find_edge` behaves the same way for edges,
+returning a default-constructed `edge_descriptor` in the not-found case. These
+are the safe form of `global_to_local`, for the case where the element is not
+known in advance to be in the subgraph.
+
+[NOTE]
+====
+*Descriptor identity and stability.* For an element that is present, the
+conversions round-trip: `global_to_local(local_to_global(x)) == x`, and the
+edge index is preserved. Properties live in the root's storage and are shared
+across the whole tree, so the same logical element carries the same property
+value no matter which subgraph's descriptor reaches it.
+====
+
+=== Hierarchy Navigation
+
+[source,cpp]
+----
+subgraph& root();
+bool is_root() const;
+subgraph& parent();
+std::pair<children_iterator, children_iterator> children() const;
+----
+
+Navigate the subgraph tree. `root()` returns the top-level graph. `parent()`
+returns the direct parent. `children()` iterates over child subgraphs.
+
+== Non-Member Functions
+
+=== Structure Access
+
+Standard graph functions: `vertices()`, `edges()`, `out_edges()`, `in_edges()`,
+`adjacent_vertices()`, `source()`, `target()`, `out_degree()`, `in_degree()`,
+`num_vertices()`, `num_edges()`, `edge()`. All operate on local descriptors.
+
+=== Structure Modification
+
+WARNING: `remove_vertex()` is not implemented (commented out in the source).
+Calling it will not compile. If you need to hide vertices, use `filtered_graph`
+on top of the subgraph.
+
+[source,cpp]
+----
+vertex_descriptor add_vertex(subgraph& g);
+----
+
+Add a new vertex to the subgraph (and all ancestors up to root).
+
+'''
+
+[source,cpp]
+----
+vertex_descriptor add_vertex(vertex_descriptor u_global, subgraph& g);
+----
+
+Add an existing global vertex to this subgraph. The vertex must already exist in
+the parent.
+
+'''
+
+[source,cpp]
+----
+std::pair<edge_descriptor, bool>
+add_edge(vertex_descriptor u, vertex_descriptor v, subgraph& g);
+----
+
+Add an edge between local vertices `u` and `v`. The edge is also added to all
+ancestor subgraphs.
+
+'''
+
+[source,cpp]
+----
+void remove_edge(vertex_descriptor u, vertex_descriptor v, subgraph& g);
+void remove_edge(edge_descriptor e, subgraph& g);
+----
+
+Remove an edge from the subgraph.
+
+=== Property Map Access
+
+Property maps operate on local descriptors. Changes to properties through a
+subgraph are visible from all other subgraphs and the root, because all
+subgraphs share the same underlying property storage.
+
+[source,cpp]
+----
+template <typename PropertyTag>
+property_map<subgraph, PropertyTag>::type
+get(PropertyTag, subgraph& g);
+----
+
+For bundled properties, use the `local()` and `global()` wrappers to
+disambiguate:
+
+[source,cpp]
+----
+auto lvm = get(local(&Node::value), sg);    // local subgraph property
+auto gvm = get(global(&Node::value), sg);   // root graph property
+----
+
+== Associated Types
+
+[cols="1,3",options="header"]
+|===
+| Type | Description
+
+| `vertex_descriptor`
+| Local descriptor within this subgraph.
+
+| `edge_descriptor`
+| Local descriptor within this subgraph.
+
+| `children_iterator`
+| Iterator for accessing child subgraphs.
+
+| All other types
+| Same as the underlying `Graph` type.
+|===
