@@ -9,6 +9,8 @@
 #ifndef BOOST_GRAPH_SIMPLE_POINT_HPP
 #define BOOST_GRAPH_SIMPLE_POINT_HPP
 
+#include <boost/container_hash/hash.hpp>
+
 #include <cmath>
 
 namespace boost
@@ -18,14 +20,38 @@ template < typename T > struct simple_point
 {
     T x;
     T y;
+
+    // Euclidean distance between two simple_point<T> using std::hypot
+    constexpr friend
+    T distance(const simple_point& a, const simple_point& b)
+    {
+        return std::hypot(a.x - b.x, a.y - b.y);
+    }
+
+    constexpr friend
+    bool operator==(simple_point const &a, simple_point const &b) noexcept
+    {
+        return a.x == b.x && a.y == b.y;
+    }
+
+    constexpr friend
+    bool operator!=(simple_point const &a, simple_point const &b) noexcept
+    {
+        return !(a == b);
+    }
+
+    friend constexpr
+    std::size_t hash_value(simple_point const& p)
+    {
+        std::size_t seed = 0;
+
+        boost::hash_combine(seed, p.x);
+        boost::hash_combine(seed, p.y);
+
+        return seed;
+    }
 };
 
-// Euclidean distance between two simple_point<T> using std::hypot
-template <typename T>
-inline T distance(const simple_point<T>& a, const simple_point<T>& b)
-{
-    return std::hypot(a.x - b.x, a.y - b.y);
-}
 
 } // end namespace boost
 

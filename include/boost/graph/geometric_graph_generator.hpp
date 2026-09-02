@@ -10,52 +10,29 @@
 #ifndef BOOST_GRAPH_GEOMETRIC_GRAPH_GENERATOR_HPP
 #define BOOST_GRAPH_GEOMETRIC_GRAPH_GENERATOR_HPP
 
+#include "boost/graph/directed_graph.hpp"
+#include <boost/graph/edge_list.hpp>
+
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/properties.hpp>
 #include <boost/graph/simple_point.hpp>
 #include <boost/static_assert.hpp>
-#include <boost/container_hash/hash.hpp>
 #include <boost/unordered/unordered_flat_set.hpp>
 #include <boost/concept/assert.hpp>
+
 #include <boost/graph/graph_concepts.hpp>
-#include <boost/geometry.hpp>
+#include <boost/graph/numeric_values.hpp>
+
 #include <algorithm>
-#include <cmath>
 #include <iterator>
 #include <random>
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <boost/geometry/geometries/point_xy.hpp>
 
 
 namespace boost
 {
-
-    // Traits class for coordinate access abstraction
-template < typename Point, typename Enable = void >
-struct geometric_point_traits
-{
-    static auto x(const Point& p) -> decltype(p.x) { return p.x; }
-    static auto y(const Point& p) -> decltype(p.y) { return p.y; }
-};
-
-/// Partial specialization for all Boost.Geometry point types
-template < typename Point >
-struct geometric_point_traits< Point,
-    typename std::enable_if<
-        std::is_same< typename boost::geometry::traits::tag< Point >::type,
-            boost::geometry::point_tag >::value >::type >
-{
-    static auto x(const Point& p) -> decltype(boost::geometry::get< 0 >(p))
-    {
-        return boost::geometry::get< 0 >(p);
-    }
-    static auto y(const Point& p) -> decltype(boost::geometry::get< 1 >(p))
-    {
-        return boost::geometry::get< 1 >(p);
-    }
-};
 
 // connect_all_geometric
 //
@@ -72,11 +49,10 @@ struct geometric_point_traits< Point,
 // Complexity: O(V^2) where V is the number of vertices
 
 template < typename VertexListGraph, typename PointContainer,
-    typename WeightMap, typename VertexIndexMap >
+    typename WeightMap, typename VertexIndexMap , typename BinaryFunction>
 void connect_all_geometric(VertexListGraph& g, const PointContainer& points,
-    WeightMap wmap, VertexIndexMap vmap)
+    WeightMap wmap, VertexIndexMap vmap, BinaryFunction distance)
 {
-    using boost::geometry::distance; 
     BOOST_CONCEPT_ASSERT((ReadablePropertyMapConcept< VertexIndexMap,
         typename graph_traits< VertexListGraph >::vertex_descriptor >));
     BOOST_CONCEPT_ASSERT((RandomAccessContainerConcept< PointContainer >));
@@ -124,10 +100,7 @@ void connect_all_geometric(VertexListGraph& g, const PointContainer& points,
             const IndexType dest_idx
                 = boost::get(vmap, *dest); // Cache destination index lookup
 
-            // Use templated distance function for compatibility with
-            // Boost.Geometry.  In the case of boost::simple_point, this uses euclidean
-            // (std::hypot)
-            const WeightType weight = static_cast< WeightType >(
+            const auto weight = static_cast< WeightType >(
                 distance(points[src_idx], points[dest_idx]));
 
             // No need to check 'inserted' - building fresh complete graph
@@ -137,6 +110,15 @@ void connect_all_geometric(VertexListGraph& g, const PointContainer& points,
     }
 }
 
+
+template < typename VertexListGraph, typename PointContainer,
+    typename WeightMap, typename VertexIndexMap>
+void connect_all_geometric(VertexListGraph& g, const PointContainer& points,
+    WeightMap wmap, VertexIndexMap vmap)
+{
+    auto adl_distance = [](auto const &a, auto const &b){ return distance(a, b); };
+    connect_all_geometric(g, points, wmap, vmap, adl_distance);
+}
 // generate_random_points
 //
 // Generates a set of random unique 2D points .
@@ -178,21 +160,8 @@ std::size_t generate_random_points(
     if (max_attempts == 0)
         max_attempts = std::max<std::size_t>(10 * num_points, 100);
 
-
-    // Hash and equality for generic PointType using traits
-    auto generic_point_hash = [](const PointType& p) {
-        std::size_t seed = 0;
-        boost::hash_combine(seed, geometric_point_traits<PointType>::x(p));
-        boost::hash_combine(seed, geometric_point_traits<PointType>::y(p));
-        return seed;
-    };
-    auto generic_point_equal = [](const PointType& lhs, const PointType& rhs) {
-        return geometric_point_traits<PointType>::x(lhs) == geometric_point_traits<PointType>::x(rhs) &&
-               geometric_point_traits<PointType>::y(lhs) == geometric_point_traits<PointType>::y(rhs);
-    };
-
-    using PointSet = boost::unordered_flat_set< PointType, decltype(generic_point_hash), decltype(generic_point_equal) >;
-    PointSet point_set(0, generic_point_hash, generic_point_equal);
+    using PointSet = boost::unordered_flat_set<PointType>;
+    PointSet point_set(0);
     point_set.reserve(num_points);
 
     std::size_t attempts = 0;
@@ -251,33 +220,33 @@ std::size_t generate_random_points(
 // Postconditions: g is a complete graph with Euclidean distance weights
 // Complexity: O(V^2) where V is the number of vertices
 template < typename VertexListGraph, typename WeightMap,
-    typename VertexIndexMap, typename CoordType = double >
+    typename VertexIndexMap, typename BinaryFunction, typename CoordType = double >
 void make_random_euclidean_graph(VertexListGraph& g, std::size_t num_points,
     std::size_t coordinate_max, WeightMap weight_map,
-    VertexIndexMap vertex_index_map)
+    VertexIndexMap vertex_index_map, BinaryFunction distance)
 {
     std::vector< simple_point< CoordType > > points;
     points.reserve(num_points);
     generate_random_points< simple_point< CoordType > >(
         num_points, coordinate_max, std::back_inserter(points));
-    connect_all_geometric(g, points, weight_map, vertex_index_map);
+    connect_all_geometric(g, points, weight_map, vertex_index_map, distance);
 }
 
 // make_random_euclidean_graph (parameterized distribution version)
 //
 // Version with custom distribution support for flexible point generation.
 template < typename VertexListGraph, typename WeightMap,
-    typename VertexIndexMap, typename XDistribution, typename YDistribution >
+    typename VertexIndexMap, typename XDistribution, typename YDistribution , typename BinaryFunction>
 void make_random_euclidean_graph(VertexListGraph& g, std::size_t num_points,
     XDistribution x_dist, YDistribution y_dist, WeightMap weight_map,
-    VertexIndexMap vertex_index_map)
+    VertexIndexMap vertex_index_map, BinaryFunction distance)
 {
     using CoordType = typename XDistribution::result_type;
     std::vector< simple_point< CoordType > > points;
     points.reserve(num_points);
     generate_random_points< simple_point< CoordType > >(
         num_points, x_dist, y_dist, std::back_inserter(points));
-    connect_all_geometric(g, points, weight_map, vertex_index_map);
+    connect_all_geometric(g, points, weight_map, vertex_index_map, distance);
 }
 
 
@@ -296,15 +265,15 @@ void make_random_euclidean_graph(VertexListGraph& g, std::size_t num_points,
 // Postconditions: g is a complete graph with geometric distance weights
 // Complexity: O(V^2) where V is the number of vertices
 template < typename PointType, typename VertexListGraph, typename WeightMap,
-    typename VertexIndexMap, typename XDistribution, typename YDistribution >
+    typename VertexIndexMap, typename XDistribution, typename YDistribution, typename BinaryFunction >
 void make_random_geometric_graph(VertexListGraph& g, std::size_t num_points,
     XDistribution x_dist, YDistribution y_dist, WeightMap weight_map,
-    VertexIndexMap vertex_index_map)
+    VertexIndexMap vertex_index_map, BinaryFunction distance)
 {
     std::vector< PointType > points;
     points.reserve(num_points);
     generate_random_points<PointType>(num_points, x_dist, y_dist, std::back_inserter(points));
-    connect_all_geometric(g, points, weight_map, vertex_index_map);
+    connect_all_geometric(g, points, weight_map, vertex_index_map, distance);
 }
 
 
